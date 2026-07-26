@@ -1,0 +1,2 @@
+# Root requirements — install backend deps for local development
+-r Backend/requirements.txt
