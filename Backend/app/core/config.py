@@ -37,10 +37,6 @@ class Settings(BaseSettings):
     # Upload limits
     max_upload_size_mb: int = Field(default=10, description="Maximum PDF upload size in MB")
 
-    # Text chunking (Phase 3)
-    chunk_size: int = Field(default=1000, description="Maximum characters per text chunk")
-    chunk_overlap: int = Field(default=200, description="Overlap between consecutive chunks")
-
     # Data paths
     data_dir: Path = Field(default=PROJECT_ROOT / "Data")
     uploads_dir: Path = Field(default=PROJECT_ROOT / "Data" / "uploads")

@@ -16,7 +16,7 @@ router = APIRouter(prefix="/documents", tags=["Documents"])
     summary="Upload a PDF document",
     description=(
         "Upload a PDF file, validate it, extract text from each page, "
-        "split text into chunks with page metadata, and prepare for embedding."
+        "and store page metadata for later RAG processing."
     ),
 )
 async def upload_document(
@@ -44,6 +44,5 @@ async def upload_document(
     return DocumentUploadResponse(
         document_name=record.document_name,
         page_count=record.page_count,
-        chunk_count=record.chunk_count,
-        message="Document uploaded, text extracted, and chunked successfully.",
+        message="Document uploaded and text extracted successfully.",
     )

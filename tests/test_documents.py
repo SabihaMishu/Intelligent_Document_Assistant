@@ -20,17 +20,13 @@ def test_upload_valid_pdf(client: TestClient, sample_pdf_bytes: bytes) -> None:
     data = response.json()
     assert data["document_name"] == "manual.pdf"
     assert data["page_count"] == 2
-    assert data["chunk_count"] >= 2
     assert "successfully" in data["message"].lower()
 
     record = document_store.current
     assert record is not None
     assert record.page_count == 2
-    assert record.chunk_count >= 2
     assert record.pages[0].page_number == 1
     assert "Safety valve" in record.pages[0].text
-    assert all(chunk.document_name == "manual.pdf" for chunk in record.chunks)
-    assert {chunk.page_number for chunk in record.chunks} == {1, 2}
 
 
 def test_upload_invalid_pdf_extension(client: TestClient) -> None:

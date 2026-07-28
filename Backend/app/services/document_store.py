@@ -1,6 +1,32 @@
 """In-memory store for the currently uploaded document (used by later phases)."""
 
-from app.models.document import DocumentRecord
+from dataclasses import dataclass, field
+from pathlib import Path
+
+
+@dataclass
+class PageContent:
+    """Extracted text from a single PDF page."""
+
+    page_number: int
+    text: str
+
+
+@dataclass
+class DocumentRecord:
+    """Metadata and extracted content for an uploaded document."""
+
+    document_name: str
+    file_path: Path
+    pages: list[PageContent] = field(default_factory=list)
+
+    @property
+    def page_count(self) -> int:
+        return len(self.pages)
+
+    @property
+    def has_text(self) -> bool:
+        return any(page.text.strip() for page in self.pages)
 
 
 class DocumentStore:

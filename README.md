@@ -96,12 +96,11 @@ Expected success response:
 {
   "document_name": "your_file.pdf",
   "page_count": 5,
-  "chunk_count": 12,
-  "message": "Document uploaded, text extracted, and chunked successfully."
+  "message": "Document uploaded and text extracted successfully."
 }
 ```
 
-The PDF is saved under `Data/uploads/`. Extracted pages and text chunks (with page metadata) are kept in memory for later embedding and RAG phases.
+The PDF is saved under `Data/uploads/` and extracted page text is kept in memory for later RAG phases.
 
 **PowerShell example:**
 
@@ -123,8 +122,8 @@ pytest tests/ -v
 | Phase | Status | Description |
 |-------|--------|-------------|
 | 1 | ✅ Done | Project structure + FastAPI + `/health` |
-| 2 | ✅ Done | PDF upload and text extraction |
-| 3 | ✅ Current | Chunking and page metadata |
+| 2 | ✅ Current | PDF upload and text extraction |
+| 3 | Pending | Chunking and page metadata |
 | 4 | Pending | Embeddings and ChromaDB |
 | 5 | Pending | RAG question answering |
 | 6 | Pending | Source citation |

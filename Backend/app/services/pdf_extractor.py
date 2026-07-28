@@ -4,7 +4,7 @@ import fitz
 
 from app.core.exceptions import AppError
 from app.core.logging import get_logger
-from app.models.document import PageContent
+from app.services.document_store import PageContent
 
 logger = get_logger(__name__)
 

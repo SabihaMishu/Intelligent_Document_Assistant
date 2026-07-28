@@ -6,10 +6,8 @@ from pathlib import Path
 from app.core.config import Settings
 from app.core.exceptions import AppError
 from app.core.logging import get_logger
-from app.models.document import DocumentRecord
-from app.services.document_store import document_store
+from app.services.document_store import DocumentRecord, document_store
 from app.services.pdf_extractor import extract_text_from_pdf, validate_pdf_bytes
-from app.services.text_chunker import chunk_document_pages
 
 logger = get_logger(__name__)
 
@@ -43,12 +41,6 @@ def process_pdf_upload(content: bytes, filename: str, settings: Settings) -> Doc
 
     validate_pdf_bytes(content, max_size_bytes=max_size_bytes)
     pages = extract_text_from_pdf(content)
-    chunks = chunk_document_pages(
-        document_name=safe_name,
-        pages=pages,
-        chunk_size=settings.chunk_size,
-        chunk_overlap=settings.chunk_overlap,
-    )
 
     settings.uploads_dir.mkdir(parents=True, exist_ok=True)
     file_path = settings.uploads_dir / safe_name
@@ -58,15 +50,13 @@ def process_pdf_upload(content: bytes, filename: str, settings: Settings) -> Doc
         document_name=safe_name,
         file_path=file_path,
         pages=pages,
-        chunks=chunks,
     )
     document_store.save(record)
 
     logger.info(
-        "Stored document '%s' with %s page(s) and %s chunk(s) at %s",
+        "Stored document '%s' with %s page(s) at %s",
         record.document_name,
         record.page_count,
-        record.chunk_count,
         file_path,
     )
     return record

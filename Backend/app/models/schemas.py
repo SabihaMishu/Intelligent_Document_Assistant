@@ -17,8 +17,7 @@ class DocumentUploadResponse(BaseModel):
 
     document_name: str = Field(..., examples=["engineering_manual.pdf"])
     page_count: int = Field(..., ge=1, examples=[12])
-    chunk_count: int = Field(..., ge=1, examples=[28])
     message: str = Field(
         ...,
-        examples=["Document uploaded, text extracted, and chunked successfully."],
+        examples=["Document uploaded and text extracted successfully."],
     )
