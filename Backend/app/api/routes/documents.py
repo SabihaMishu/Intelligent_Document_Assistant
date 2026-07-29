@@ -4,8 +4,11 @@ from fastapi import APIRouter, File, UploadFile
 
 from app.core.config import get_settings
 from app.core.exceptions import AppError
-from app.models.schemas import DocumentUploadResponse
+from app.models.schemas import DocumentUploadResponse, DocumentProcessResponse
 from app.services.document_service import process_pdf_upload
+from app.services.document_store import document_store
+from app.services.chunking_service import process_document_into_chunks
+from app.services.embedding_service import vector_store
 
 router = APIRouter(prefix="/documents", tags=["Documents"])
 
@@ -46,3 +49,32 @@ async def upload_document(
         page_count=record.page_count,
         message="Document uploaded and text extracted successfully.",
     )
+
+
+@router.post(
+    "/process",
+    response_model=DocumentProcessResponse,
+    summary="Chunk and embed the uploaded document",
+    description="Chunk the text of the previously uploaded document and store embeddings in ChromaDB.",
+)
+async def process_document() -> DocumentProcessResponse:
+    """Process the current document: chunk text and store embeddings."""
+    if not document_store.has_document or not document_store.current:
+        raise AppError("No active document found. Please upload a PDF first.", status_code=400)
+        
+    doc = document_store.current
+    
+    # 1. Chunking
+    chunks = process_document_into_chunks(doc)
+    if not chunks:
+        raise AppError("No text could be extracted or chunked from the document.", status_code=400)
+        
+    # 2. Embeddings & Vector Store
+    chunks_stored = vector_store.store_chunks(document_name=doc.document_name, chunks=chunks)
+    
+    return DocumentProcessResponse(
+        document_name=doc.document_name,
+        chunks_created=chunks_stored,
+        message="Document chunks embedded and stored in ChromaDB successfully.",
+    )
+

@@ -21,3 +21,14 @@ class DocumentUploadResponse(BaseModel):
         ...,
         examples=["Document uploaded and text extracted successfully."],
     )
+
+class DocumentProcessResponse(BaseModel):
+    """Response model after successful chunking and embedding."""
+
+    document_name: str = Field(..., examples=["engineering_manual.pdf"])
+    chunks_created: int = Field(..., ge=1, examples=[45])
+    message: str = Field(
+        ...,
+        examples=["Document chunks embedded and stored in ChromaDB successfully."],
+    )
+
