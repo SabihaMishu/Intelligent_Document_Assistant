@@ -4,11 +4,18 @@ from fastapi import APIRouter, File, UploadFile
 
 from app.core.config import get_settings
 from app.core.exceptions import AppError
-from app.models.schemas import DocumentUploadResponse, DocumentProcessResponse
+from app.models.schemas import (
+    DocumentUploadResponse, 
+    DocumentProcessResponse, 
+    ChatRequest, 
+    ChatResponse, 
+    RiskAnalysisResponse
+)
 from app.services.document_service import process_pdf_upload
 from app.services.document_store import document_store
 from app.services.chunking_service import process_document_into_chunks
 from app.services.embedding_service import vector_store
+from app.services.rag_service import answer_question, analyze_risk
 
 router = APIRouter(prefix="/documents", tags=["Documents"])
 
@@ -77,4 +84,35 @@ async def process_document() -> DocumentProcessResponse:
         chunks_created=chunks_stored,
         message="Document chunks embedded and stored in ChromaDB successfully.",
     )
+
+
+@router.post(
+    "/qa",
+    response_model=ChatResponse,
+    summary="Ask a question about the active document",
+    description="Uses RAG with Gemini to answer a question based on the document's content.",
+)
+async def ask_question(request: ChatRequest) -> ChatResponse:
+    """Answer questions based on the uploaded document."""
+    if not document_store.has_document or not document_store.current:
+        raise AppError("No active document found. Please upload a PDF first.", status_code=400)
+        
+    doc = document_store.current
+    return answer_question(query=request.query, document_name=doc.document_name)
+
+
+@router.get(
+    "/analyze",
+    response_model=RiskAnalysisResponse,
+    summary="Run risk and compliance analysis",
+    description="Analyzes the document for potential risks and compliance issues.",
+)
+async def analyze_document() -> RiskAnalysisResponse:
+    """Run risk and compliance analysis on the active document."""
+    if not document_store.has_document or not document_store.current:
+        raise AppError("No active document found. Please upload a PDF first.", status_code=400)
+        
+    doc = document_store.current
+    return analyze_risk(document_name=doc.document_name)
+
 

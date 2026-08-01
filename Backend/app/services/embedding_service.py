@@ -2,7 +2,7 @@
 
 import chromadb
 from chromadb.api.types import Documents, EmbeddingFunction, Embeddings
-import google.generativeai as genai
+import chromadb.utils.embedding_functions as embedding_functions
 
 from app.core.config import get_settings
 from app.core.exceptions import AppError
@@ -12,31 +12,6 @@ from app.services.chunking_service import DocumentChunk
 logger = get_logger(__name__)
 
 
-class GeminiEmbeddingFunction(EmbeddingFunction):
-    """Custom embedding function for ChromaDB using Google Gemini."""
-    
-    def __init__(self, api_key: str, model_name: str = "models/text-embedding-004"):
-        if not api_key:
-            raise AppError("Gemini API key is missing. Set GEMINI_API_KEY.", status_code=500)
-        genai.configure(api_key=api_key)
-        self.model_name = model_name
-
-    def __call__(self, input: Documents) -> Embeddings:
-        """Generate embeddings for a list of documents."""
-        # Using task_type="RETRIEVAL_DOCUMENT" for documents in the database
-        try:
-            result = genai.embed_content(
-                model=self.model_name,
-                content=input,
-                task_type="RETRIEVAL_DOCUMENT",
-            )
-            # embed_content returns a dictionary with 'embedding' key which is a list of embeddings
-            return result['embedding']
-        except Exception as e:
-            logger.error("Error generating embeddings: %s", e)
-            raise AppError(f"Failed to generate embeddings: {e}", status_code=500)
-
-
 class VectorStoreService:
     """Service to handle vector database operations with Chroma."""
     
@@ -44,20 +19,14 @@ class VectorStoreService:
         settings = get_settings()
         self.client = chromadb.PersistentClient(path=str(settings.chroma_dir))
         
-        # Configure the embedding function
-        api_key = settings.gemini_api_key
-        if not api_key:
-            logger.warning("GEMINI_API_KEY is not set. Vector store might not work if embeddings are requested.")
-            self.embedding_fn = None
-        else:
-            self.embedding_fn = GeminiEmbeddingFunction(api_key=api_key)
+        # Configure the embedding function to use Sentence Transformers
+        self.embedding_fn = embedding_functions.SentenceTransformerEmbeddingFunction(
+            model_name="all-MiniLM-L6-v2"
+        )
             
         self.collection_name = "document_chunks"
 
     def get_or_create_collection(self):
-        if not self.embedding_fn:
-             raise AppError("Gemini API key is not configured.", status_code=500)
-             
         return self.client.get_or_create_collection(
             name=self.collection_name,
             embedding_function=self.embedding_fn,
@@ -94,5 +63,33 @@ class VectorStoreService:
             self.client.delete_collection(name=self.collection_name)
         except Exception:
             pass
+
+    def query_chunks(self, query: str, n_results: int = 5, document_name: str | None = None) -> list[dict]:
+        """Query ChromaDB for relevant chunks."""
+        collection = self.get_or_create_collection()
+        
+        where = {"document_name": document_name} if document_name else None
+        
+        # ChromaDB will call self.embedding_fn which uses Sentence Transformers.
+        
+        results = collection.query(
+            query_texts=[query],
+            n_results=n_results,
+            where=where,
+        )
+        
+        # Format results
+        chunks = []
+        if results['documents'] and len(results['documents']) > 0:
+            for i, doc in enumerate(results['documents'][0]):
+                meta = results['metadatas'][0][i] if results['metadatas'] else {}
+                chunks.append({
+                    "text": doc,
+                    "metadata": meta,
+                    "distance": results['distances'][0][i] if results['distances'] else 0.0
+                })
+        
+        return chunks
+
 
 vector_store = VectorStoreService()

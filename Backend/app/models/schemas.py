@@ -32,3 +32,21 @@ class DocumentProcessResponse(BaseModel):
         examples=["Document chunks embedded and stored in ChromaDB successfully."],
     )
 
+class ChatRequest(BaseModel):
+    query: str = Field(..., examples=["What are the main constraints mentioned?"])
+
+class SourceCitationModel(BaseModel):
+    page_number: int
+    text_snippet: str
+
+class ChatResponse(BaseModel):
+    answer: str
+    citations: list[SourceCitationModel]
+    confidence_score: str
+
+class RiskAnalysisResponse(BaseModel):
+    risks: list[str]
+    compliance_issues: list[str]
+    citations: list[SourceCitationModel]
+
+
