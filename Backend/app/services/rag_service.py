@@ -1,6 +1,6 @@
 """RAG and Analysis service using Gemini and retrieved chunks."""
 
-import google.generativeai as genai
+from google import genai
 from pydantic import BaseModel, Field
 
 from app.core.config import get_settings
@@ -10,13 +10,13 @@ from app.services.embedding_service import vector_store
 
 from app.models.schemas import ChatResponse, RiskAnalysisResponse, SourceCitationModel
 
-def _get_genai_model():
-    """Helper to initialize GenAI model."""
+def _get_genai_client():
+    """Helper to initialize GenAI client."""
     settings = get_settings()
     if not settings.gemini_api_key:
         raise AppError("Gemini API key is missing. Set GEMINI_API_KEY.", status_code=500)
-    genai.configure(api_key=settings.gemini_api_key)
-    return genai.GenerativeModel("gemini-1.5-pro")
+    
+    return genai.Client(api_key=settings.gemini_api_key)
 
 
 def _format_context(chunks: list[dict]) -> str:
@@ -40,7 +40,7 @@ def answer_question(query: str, document_name: str | None = None) -> ChatRespons
         )
 
     context = _format_context(chunks)
-    model = _get_genai_model()
+    client = _get_genai_client()
     
     prompt = f"""You are an expert AI Engineering Document Assistant.
 Answer the user's question based strictly on the provided context.
@@ -53,9 +53,16 @@ Context:
 Question: {query}
 """
 
-    response = model.generate_content(prompt)
-    answer_text = response.text
+    try:
+        response = client.models.generate_content(
+            model="models/gemini-3.6-flash", 
+            contents=prompt
+        )
+        answer_text = response.text
+    except Exception as e:
+        raise AppError(f"Failed to generate answer from Gemini API: {str(e)}", status_code=502)
     
+
     # Simple parsing of citations for the response object
     citations = [
         SourceCitationModel(
@@ -81,7 +88,7 @@ def analyze_risk(document_name: str | None = None) -> RiskAnalysisResponse:
         return RiskAnalysisResponse(risks=[], compliance_issues=[], citations=[])
 
     context = _format_context(chunks)
-    model = _get_genai_model()
+    client = _get_genai_client()
     
     prompt = f"""You are a strict compliance and risk analysis expert.
 Review the following document context and identify:
@@ -94,9 +101,16 @@ Context:
 {context}
 """
 
-    response = model.generate_content(prompt)
-    analysis_text = response.text
+    try:
+        response = client.models.generate_content(
+            model="models/gemini-3.6-flash", 
+            contents=prompt
+        )
+        analysis_text = response.text
+    except Exception as e:
+        raise AppError(f"Failed to generate analysis from Gemini API: {str(e)}", status_code=502)
     
+
     # We will just parse the text into a simple list by splitting lines or return the raw text 
     # For robust production, use structured output or function calling. 
     # Here we simulate the split based on typical markdown lists.

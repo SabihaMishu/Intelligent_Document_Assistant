@@ -80,9 +80,14 @@ class VectorStoreService:
         
         # Format results
         chunks = []
-        if results['documents'] and len(results['documents']) > 0:
+        if results.get('documents') and len(results['documents']) > 0:
             for i, doc in enumerate(results['documents'][0]):
-                meta = results['metadatas'][0][i] if results['metadatas'] else {}
+                meta = None
+                if results.get('metadatas') and len(results['metadatas']) > 0:
+                    meta = results['metadatas'][0][i]
+                if meta is None:
+                    meta = {}
+                    
                 chunks.append({
                     "text": doc,
                     "metadata": meta,
